@@ -1,10 +1,45 @@
-const { User } = require('../../models')
+const { User, Post } = require('../../models')
 
 const router = require('express').Router()
 router.get('/', (req, res)=>{
     User.findAll().then(users => res.json(users))
 });
 
+// GET /api/user/1
+router.get('/:id', async (req, res) => {
+  try {
+    const userData = await User.findOne({where:{id:req.params.id}});
+
+    if (!userData) {
+      res.status(404).json({ message: 'No user found with that id!' });
+      return;
+    }
+
+    res.status(200).json(userData);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});;
+
+//POST /api/user/login
+router.post('/login', async(req, res)=> {
+  try {
+    const userData = await User.findOne({where:{email:req.body.email}});
+    if (!userData) {
+      res.status(404).json({ message: 'No user found with that'
+      });
+      return; 
+      }
+      req.session.save(()=>{
+        req.session.userId=userData.id;
+        req.session.username=userData.name;
+        req.session.loggedIn=true
+        res.json(userData)
+    })
+    } catch (err) {
+      res.status(500).json(err);
+    }
+})
 
 //POST /api/user
 router.post('/', async(req, res)=> {
@@ -23,40 +58,5 @@ router.post('/', async(req, res)=> {
 
 })
 
-// GET /api/users/1
-router.get('/:id', (req, res) => {
-    User.findOne({
-        attributes: { exclude: ['password']},
-        where: {
-          id: req.params.id
-        },
-        include: [
-            {
-              model: Post,
-              attributes: ['id', 'title', 'post_text']
-            },
-            {
-                model: Comments,
-                attributes: ['id', 'comment_text',],
-                include: {
-                  model: Post,
-                  attributes: ['title']
-                }
-            }
-          ]
-
-    })
-      .then(dbUserData => {
-        if (!dbUserData) {
-          res.status(404).json({ message: 'No user found with this id' });
-          return;
-        }
-        res.json(dbUserData);
-      })
-      .catch(err => {
-        console.log(err);
-        res.status(500).json(err);
-      });
-  });
 
 module.exports= router
